@@ -1,0 +1,276 @@
+/* Google Font: Montserrat for general text */
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&display=swap');
+
+/* 7-segment / Digital font */
+@font-face {
+	font-family: 'Digital7';
+	src: url('https://fonts.cdnfonts.com/s/12365/digital-7 (mono).ttf')
+		format('truetype');
+}
+
+html,
+body {
+	margin: 0;
+	padding: 0;
+	width: 100%;
+	height: 100%;
+	overflow: hidden;
+}
+
+body {
+	background: #0d1117;
+	color: #e6e6e6;
+	font-family: 'Montserrat', sans-serif;
+	text-align: center;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: 1rem;
+	box-sizing: border-box;
+}
+
+/* Title */
+h1 {
+	font-size: clamp(1.2rem, 5vw, 2rem);
+	margin-bottom: 2rem;
+	color: #ffffff;
+	letter-spacing: 2px;
+	font-weight: 600;
+	text-shadow: 0 0 10px rgba(78, 184, 255, 0.4);
+}
+
+/* Countdown container */
+#countdown {
+	display: flex;
+	gap: clamp(0.75rem, 3vw, 1.5rem);
+	flex-wrap: wrap;
+	justify-content: center;
+	align-items: center;
+	perspective: 1000px;
+}
+
+.time-block {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	position: relative;
+}
+
+/* Flip card number */
+.number {
+	position: relative;
+	width: clamp(3rem, 18vw, 6.5rem);
+	height: clamp(3.5rem, 16vw, 7.5rem);
+	line-height: 1;
+	font-family: 'Digital7', monospace;
+	font-size: clamp(2rem, 10vw, 4.5rem);
+	color: #4eb8ff;
+	background: #18202c;
+	border-radius: 8px;
+	box-shadow:
+		0 4px 6px rgba(0, 0, 0, 0.3),
+		0 0 15px rgba(78, 184, 255, 0.6);
+	text-shadow: 0 0 10px #4eb8ff;
+	border: 1px solid #2c3a4f;
+	overflow: hidden;
+	transform-style: preserve-3d;
+}
+
+/* Top and bottom halves for flip animation */
+.number > div {
+	position: absolute;
+	width: 100%;
+	height: 50%;
+	overflow: hidden;
+	background: #18202c;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	backface-visibility: hidden;
+	transform-style: preserve-3d;
+}
+
+.top {
+	top: 0;
+	transform: translateY(50%);
+	z-index: 20;
+}
+
+.bottom {
+	top: 50%;
+	transform: translateY(-50%) rotateX(180deg);
+	z-index: 10;
+}
+
+/* Flip animation triggered by .flip class */
+.number.flip .top {
+	transform-origin: bottom;
+	transform: translateY(50%) rotateX(-180deg);
+	transition: transform 0.5s ease-in;
+	z-index: 30;
+}
+
+.number.flip .bottom {
+	transform-origin: top;
+	transform: translateY(-50%) rotateX(0deg);
+	transition: transform 0.5s ease-out;
+	transition-delay: 0.5s;
+	z-index: 25;
+}
+
+/* Labels under each number */
+.label {
+	font-size: clamp(0.6rem, 2vw, 1rem);
+	color: #9aaabf;
+	margin-top: 0.75rem;
+	letter-spacing: 3px;
+	text-transform: uppercase;
+	font-weight: 400;
+}
+
+/* Timezone display */
+#timezone {
+	margin-top: 3rem;
+	font-size: clamp(0.6rem, 1.5vw, 1rem);
+	color: #4e5f7b;
+	word-wrap: break-word;
+	letter-spacing: 1px;
+}
+
+/* --- MINIGAME STYLES --- */
+#minigame-container {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	pointer-events: none;
+	z-index: 1;
+}
+
+/* Container for score + controls */
+#game-controls-container {
+	position: fixed;
+	bottom: 12px;
+	left: 50%;
+	transform: translateX(-50%);
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 6px;
+	background: rgba(20, 20, 20, 0.8);
+	padding: 6px 12px;
+	border-radius: 10px;
+	z-index: 100;
+	pointer-events: auto;
+}
+
+/* Score display */
+#score {
+	font-family: 'Digital7', monospace;
+	font-size: 1.5rem;
+	color: #4eb8ff;
+	text-shadow: 0 0 6px #4eb8ff;
+}
+
+/* Minimalist Control Buttons */
+#controls {
+	display: flex;
+	flex-direction: row;
+	gap: 6px;
+}
+
+#controls button {
+	background: transparent;
+	color: #ffffff;
+	border: none;
+	padding: 4px 8px;
+	font-size: 0.75rem;
+	font-weight: 500;
+	cursor: pointer;
+	transition:
+		background 0.2s,
+		color 0.2s;
+	border-radius: 6px;
+}
+
+#controls button:hover:not(:disabled) {
+	background: rgba(255, 255, 255, 0.1);
+}
+
+#controls button:active:not(:disabled) {
+	background: rgba(255, 255, 255, 0.2);
+}
+
+#controls button:disabled {
+	color: rgba(255, 255, 255, 0.5);
+	cursor: not-allowed;
+}
+
+/* Celebration bubbles */
+.celebration-bubble {
+	position: absolute;
+	font-size: clamp(1.5rem, 5vw, 3rem);
+	cursor: pointer;
+	animation: fadeInOut 2s forwards;
+	pointer-events: auto;
+	transform: translate(-50%, -50%);
+	z-index: 50;
+	transition: transform 0.1s;
+}
+
+.celebration-bubble:active {
+	transform: translate(-50%, -50%) scale(0.8);
+}
+
+@keyframes fadeInOut {
+	0% {
+		opacity: 0;
+		transform: translate(-50%, -50%) scale(0.5);
+	}
+	10% {
+		opacity: 1;
+		transform: translate(-50%, -50%) scale(1);
+	}
+	90% {
+		opacity: 1;
+		transform: translate(-50%, -50%) scale(1);
+	}
+	100% {
+		opacity: 0;
+		transform: translate(-50%, -50%) scale(1.5);
+	}
+}
+
+/* Mobile responsiveness */
+@media (max-width: 600px) {
+	#countdown {
+		gap: 0.5rem;
+	}
+
+	.number {
+		width: clamp(2.5rem, 15vw, 4rem);
+		height: clamp(3rem, 14vw, 5rem);
+		font-size: clamp(1.8rem, 8vw, 3rem);
+	}
+
+	h1 {
+		font-size: clamp(1rem, 6vw, 1.8rem);
+	}
+
+	#game-controls-container {
+		bottom: 8px;
+		padding: 4px 10px;
+		gap: 4px;
+	}
+
+	#score {
+		font-size: 1.2rem;
+	}
+
+	#controls button {
+		font-size: 0.7rem;
+		padding: 2px 6px;
+	}
+}
