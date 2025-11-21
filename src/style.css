@@ -60,11 +60,17 @@ h1 {
 /* Flip card number */
 .number {
 	position: relative;
-	width: clamp(3rem, 18vw, 6.5rem);
-	height: clamp(3.5rem, 16vw, 7.5rem);
+	width: clamp(4rem, 18vw, 7rem);
+	height: clamp(4rem, 18vw, 7rem);
 	line-height: 1;
+
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	text-align: center;
+
 	font-family: 'Digital7', monospace;
-	font-size: clamp(2rem, 10vw, 4.5rem);
+	font-size: clamp(2rem, 10vw, 4rem);
 	color: #4eb8ff;
 	background: #18202c;
 	border-radius: 8px;
@@ -76,6 +82,7 @@ h1 {
 	overflow: hidden;
 	transform-style: preserve-3d;
 }
+
 
 /* Top and bottom halves for flip animation */
 .number > div {
