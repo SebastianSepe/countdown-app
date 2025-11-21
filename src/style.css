@@ -200,6 +200,7 @@ h1 {
 		background 0.2s,
 		color 0.2s;
 	border-radius: 6px;
+	text-transform: uppercase;
 }
 
 #controls button:hover:not(:disabled) {
