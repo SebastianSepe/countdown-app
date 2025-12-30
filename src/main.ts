@@ -6,6 +6,10 @@ const daysElem = document.getElementById('days')!;
 const hoursElem = document.getElementById('hours')!;
 const minutesElem = document.getElementById('minutes')!;
 const secondsElem = document.getElementById('seconds')!;
+// Production mode: real countdown to next year and 2 hours celebration
+const TEST_MODE = false;
+const TEST_INITIAL_DELAY = 3 * 1000; // unused when TEST_MODE = false
+const TEST_FIREWORKS_DURATION = 20 * 1000; // unused when TEST_MODE = false
 
 // Display detected timezone
 const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -48,17 +52,133 @@ let manualFireworksCanvas: HTMLCanvasElement | null = null;
 // Shared options for celebration and manual shots
 const CELEBRATION_FIREWORKS_OPTIONS = {
 	hue: { min: 0, max: 360 },
-	delay: { min: 15, max: 30 },
+	delay: { min: 25, max: 55 },
 	rocketsPoint: { min: 0, max: 100 },
-	acceleration: 1.05,
+	acceleration: 1.00,
 	friction: 0.97,
 	gravity: 1.5,
 	particles: 80,
 	explosion: 5,
 	autoresize: true,
 	brightness: { min: 50, max: 80 },
-	decay: { min: 0.015, max: 0.03 }
+	decay: { min: 0.015, max: 0.03 },
+	sound: {
+		enabled: true,
+		// Put your explosion files in /assets/ (adjust names/paths as needed)
+		files: [
+			'/countdown-app/assets/explosion0.mp3',
+			'/countdown-app/assets/explosion1.mp3',
+			'/countdown-app/assets/explosion2.mp3'
+		],
+		volume: { min: 4, max: 8 }
+	}
 };
+
+// Ensure sound file URLs respect Vite's `base` (import.meta.env.BASE_URL)
+(() => {
+	try {
+		const base = ((import.meta as any).env && (import.meta as any).env.BASE_URL) || '/';
+		if (CELEBRATION_FIREWORKS_OPTIONS.sound && Array.isArray(CELEBRATION_FIREWORKS_OPTIONS.sound.files)) {
+			CELEBRATION_FIREWORKS_OPTIONS.sound.files = CELEBRATION_FIREWORKS_OPTIONS.sound.files.map((p: string) => {
+				// Si ya empieza con base, no anteponer de nuevo
+				if (p.startsWith(base)) return p;
+				// Si empieza con '/', quitarlo para evitar doble barra
+				const cleaned = p.replace(/^\//, '');
+				return (base.endsWith('/') ? base : base + '/') + cleaned;
+			});
+		}
+	} catch (e) {
+		// ignore
+	}
+})();
+
+// Try to resume/create an AudioContext so the browser allows playback
+function tryUnlockAudio() {
+	try {
+		const C = (window as any).AudioContext || (window as any).webkitAudioContext;
+		if (!C) return;
+		const ac = new C();
+		if (ac.state === 'suspended') {
+			ac.resume().then(() => {
+				ac.close();
+				console.debug('AudioContext resumed to allow fireworks sounds');
+			}).catch(() => {
+				// ignore
+			});
+		} else {
+			ac.close();
+		}
+	} catch (e) {
+		// ignore
+	}
+}
+
+// Verify which sound files are reachable (same-origin). Returns array of valid urls.
+async function verifySoundFiles(files: string[] | undefined): Promise<string[]> {
+	if (!files || !files.length) return [];
+	const valid: string[] = [];
+	for (const f of files) {
+		try {
+			const res = await fetch(f, { method: 'HEAD' });
+			if (res.ok) {
+				valid.push(f);
+				continue;
+			}
+			// Some servers don't support HEAD; try GET but don't download body fully
+			const res2 = await fetch(f, { method: 'GET' });
+			if (res2.ok) valid.push(f);
+		} catch (e) {
+			// ignore unreachable
+		}
+	}
+	return valid;
+}
+
+// Fetch and decode audio files with AudioContext. Returns decoded AudioBuffer[] and the urls used.
+async function fetchAndDecodeSoundFiles(files: string[] | undefined): Promise<{ urls: string[]; buffers: AudioBuffer[]; audioContext: AudioContext } | null> {
+	if (!files || !files.length) return null;
+	try {
+		const C = (window as any).AudioContext || (window as any).webkitAudioContext;
+		if (!C) return null;
+		const ac = new C();
+		const buffers: AudioBuffer[] = [];
+		const urls: string[] = [];
+		for (const f of files) {
+			try {
+				console.debug('[fireworks] Fetching sound file:', f);
+				const res = await fetch(f);
+				if (!res.ok) {
+					console.warn(`[fireworks] Sound file not found or not ok: ${f}`);
+					continue;
+				}
+				const ab = await res.arrayBuffer();
+				try {
+					const decoded = await new Promise<AudioBuffer>((resolve, reject) => ac.decodeAudioData(ab, resolve, reject));
+					buffers.push(decoded);
+					urls.push(f);
+					console.debug(`[fireworks] Decoded sound file OK: ${f}`);
+				} catch (e) {
+					console.error(`[fireworks] Unable to decode audio data for: ${f}`, e);
+					alert(`No se pudo decodificar el archivo de sonido: ${f}\n¿Es un MP3 válido?`);
+					continue;
+				}
+			} catch (e) {
+				console.error(`[fireworks] Error fetching sound file: ${f}`, e);
+				continue;
+			}
+		}
+		if (!buffers.length) {
+			try {
+				ac.close();
+			} catch {}
+			return null;
+		}
+		return { urls, buffers, audioContext: ac };
+	} catch (e) {
+		console.error('[fireworks] Error in fetchAndDecodeSoundFiles', e);
+		return null;
+	}
+}
 
 let countdownElem: HTMLElement | null = null;
 let prevCountdownDisplay: string | null = null;
@@ -69,10 +189,7 @@ let controlsElem: HTMLElement | null = null;
 let prevControlsDisplay: string | null = null;
 
 let targetDate: Date;
-// Production mode: real countdown to next year and 2 hours celebration
-const TEST_MODE = false;
-const TEST_INITIAL_DELAY = 3 * 1000; // unused when TEST_MODE = false
-const TEST_FIREWORKS_DURATION = 20 * 1000; // unused when TEST_MODE = false
+
 
 function setTargetToNextYear() {
 	const now = new Date();
@@ -161,6 +278,27 @@ function startFireworks() {
 
 		fireworksInstance = new Fireworks(canvas, Object.assign({}, CELEBRATION_FIREWORKS_OPTIONS, { mouse: { click: false, move: false, max: 0 } }));
 	fireworksInstance.start();
+
+		(async () => {
+			try {
+				tryUnlockAudio();
+				const inst: any = fireworksInstance;
+				const files = CELEBRATION_FIREWORKS_OPTIONS.sound?.files;
+				const valid = await verifySoundFiles(files);
+				if (valid.length > 0) {
+					inst.updateOptions({ sound: { enabled: true, files: valid, volume: CELEBRATION_FIREWORKS_OPTIONS.sound?.volume } });
+					if (inst && inst.sound && typeof inst.sound.init === 'function') {
+						inst.sound.init();
+						console.debug('Prefetching celebration sounds');
+					}
+				} else {
+					inst.updateOptions({ sound: { enabled: false } });
+					console.debug('No valid fireworks sound files found; sound disabled');
+				}
+			} catch (err) {
+				console.warn('Could not prefetch celebration sounds', err);
+			}
+		})().catch(() => {});
 
 
 	// duration depending on test mode (2 hours production, 5s in test)
@@ -332,6 +470,42 @@ function shootSingleFirework() {
 	if (!manualFireworksInstance) {
 		manualFireworksInstance = new Fireworks(manualFireworksCanvas, manualOptions);
 		manualFireworksInstance.start();
+
+		(async () => {
+			try {
+				tryUnlockAudio();
+				const inst: any = manualFireworksInstance;
+				const files = CELEBRATION_FIREWORKS_OPTIONS.sound?.files;
+				const valid = await verifySoundFiles(files);
+				if (valid.length > 0) {
+					const decoded = await fetchAndDecodeSoundFiles(valid);
+					if (decoded && decoded.buffers && decoded.buffers.length) {
+						inst.updateOptions({ sound: { enabled: true, files: decoded.urls, volume: CELEBRATION_FIREWORKS_OPTIONS.sound?.volume } });
+						try {
+							inst.sound.audioContext = decoded.audioContext;
+							inst.sound.buffers = decoded.buffers;
+							inst.sound.onInit = true;
+							console.debug('Injected decoded manual fireworks sounds into instance');
+						} catch (e) {
+							try {
+								if (inst && inst.sound && typeof inst.sound.init === 'function') inst.sound.init();
+								console.debug('Fallback: called inst.sound.init() for manual instance');
+							} catch (err) {
+								console.warn('Could not initialize manual fireworks sounds', err);
+							}
+						}
+					} else {
+						inst.updateOptions({ sound: { enabled: false } });
+						console.debug('No valid manual sound buffers decoded; sound disabled');
+					}
+				} else {
+					inst.updateOptions({ sound: { enabled: false } });
+					console.debug('No valid manual fireworks sound files found; sound disabled');
+				}
+			} catch (err) {
+				console.warn('Could not prefetch manual sounds', err);
+			}
+		})().catch(() => {});
 		// wait a frame to ensure internal listeners are attached
 		requestAnimationFrame(() => {
 			try {
