@@ -170,7 +170,7 @@ async function fetchAndDecodeSoundFiles(files: string[] | undefined): Promise<{ 
 		if (!buffers.length) {
 			try {
 				ac.close();
-			} catch {}
+			} catch { }
 			return null;
 		}
 		return { urls, buffers, audioContext: ac };
@@ -276,29 +276,29 @@ function startFireworks() {
 		controlsElem.style.display = 'none';
 	}
 
-		fireworksInstance = new Fireworks(canvas, Object.assign({}, CELEBRATION_FIREWORKS_OPTIONS, { mouse: { click: false, move: false, max: 0 } }));
+	fireworksInstance = new Fireworks(canvas, Object.assign({}, CELEBRATION_FIREWORKS_OPTIONS, { mouse: { click: false, move: false, max: 0 } }));
 	fireworksInstance.start();
 
-		(async () => {
-			try {
-				tryUnlockAudio();
-				const inst: any = fireworksInstance;
-				const files = CELEBRATION_FIREWORKS_OPTIONS.sound?.files;
-				const valid = await verifySoundFiles(files);
-				if (valid.length > 0) {
-					inst.updateOptions({ sound: { enabled: true, files: valid, volume: CELEBRATION_FIREWORKS_OPTIONS.sound?.volume } });
-					if (inst && inst.sound && typeof inst.sound.init === 'function') {
-						inst.sound.init();
-						console.debug('Prefetching celebration sounds');
-					}
-				} else {
-					inst.updateOptions({ sound: { enabled: false } });
-					console.debug('No valid fireworks sound files found; sound disabled');
+	(async () => {
+		try {
+			tryUnlockAudio();
+			const inst: any = fireworksInstance;
+			const files = CELEBRATION_FIREWORKS_OPTIONS.sound?.files;
+			const valid = await verifySoundFiles(files);
+			if (valid.length > 0) {
+				inst.updateOptions({ sound: { enabled: true, files: valid, volume: CELEBRATION_FIREWORKS_OPTIONS.sound?.volume } });
+				if (inst && inst.sound && typeof inst.sound.init === 'function') {
+					inst.sound.init();
+					console.debug('Prefetching celebration sounds');
 				}
-			} catch (err) {
-				console.warn('Could not prefetch celebration sounds', err);
+			} else {
+				inst.updateOptions({ sound: { enabled: false } });
+				console.debug('No valid fireworks sound files found; sound disabled');
 			}
-		})().catch(() => {});
+		} catch (err) {
+			console.warn('Could not prefetch celebration sounds', err);
+		}
+	})().catch(() => { });
 
 
 	// duration depending on test mode (2 hours production, 5s in test)
@@ -505,7 +505,7 @@ function shootSingleFirework() {
 			} catch (err) {
 				console.warn('Could not prefetch manual sounds', err);
 			}
-		})().catch(() => {});
+		})().catch(() => { });
 		// wait a frame to ensure internal listeners are attached
 		requestAnimationFrame(() => {
 			try {
@@ -587,6 +587,28 @@ function createBubble() {
 		if (bubble.parentElement) bubble.remove();
 	}, BUBBLE_LIFESPAN);
 }
+
+// Prevent double-tap zoom on floating fireworks button (mobile)
+const btn = document.getElementById('fireworks-floating-btn') as HTMLButtonElement | null;
+if (btn) {
+	let lastTouchEnd = 0;
+
+	btn.addEventListener(
+		'touchend',
+		(e: TouchEvent) => {
+			const now = Date.now();
+
+			if (now - lastTouchEnd <= 300) {
+				e.preventDefault(); // bloquea doble tap zoom
+			}
+
+			lastTouchEnd = now;
+		},
+		{ passive: false }
+	);
+}
+
+
 
 // Initialize game buttons
 updateButtonState();
