@@ -590,19 +590,20 @@ function createBubble() {
 
 // Prevent double-tap zoom on floating fireworks button (mobile)
 const btn = document.getElementById('fireworks-floating-btn') as HTMLButtonElement | null;
+
 if (btn) {
-	let lastTouchEnd = 0;
+	let lastTouchTime = 0;
 
 	btn.addEventListener(
-		'touchend',
+		'touchstart',
 		(e: TouchEvent) => {
 			const now = Date.now();
 
-			if (now - lastTouchEnd <= 300) {
-				e.preventDefault(); // bloquea doble tap zoom
+			if (now - lastTouchTime < 300) {
+				e.preventDefault(); // bloquea doble tap
 			}
 
-			lastTouchEnd = now;
+			lastTouchTime = now;
 		},
 		{ passive: false }
 	);
